@@ -1,0 +1,95 @@
+;; Setup env data
+(begin-tx "Set env data")
+
+(env-enable-repl-natives true)
+(env-data {
+    'happybanana-airdrop-admin-keyset: { "keys": ["admin-key"], "pred": "keys-all" },
+    'gigi-keyset: { "keys": ["gigi-key"], "pred": "keys-all" },
+    'pippo-keyset: { "keys": ["pippo-key"], "pred": "keys-all" },
+    'namespace-keyset: { "keys": [ ], "pred": "keys-all" },
+    'upgrade: false
+})
+
+(define-namespace "free" (read-keyset "namespace-keyset") (read-keyset "namespace-keyset"))
+
+(commit-tx)
+
+;; Load all the neccessary modules
+(begin-tx "Load modules")
+
+(load "root/fungible-v2.pact")
+(load "root/fungible-xchain-v1.pact")
+(load "root/coin-v4.pact")
+
+(create-table coin.coin-table)
+(create-table coin.allocation-table)
+
+(load "happy-airdrop.pact")
+
+(commit-tx)
+
+;; Create admin and user test accounts and fund the admin account
+(begin-tx "Create accounts and fund")
+(use free.happybanana-airdrop)
+
+(coin.create-account "admin" (read-keyset "happybanana-airdrop-admin-keyset"))
+(coin.create-account "gigi" (read-keyset "gigi-keyset"))
+(coin.create-account "pippo" (read-keyset "pippo-keyset"))
+
+(env-sigs [ { "key": "admin-key", "caps": [ (GOVERNANCE) ] } ])
+(test-capability (coin.CREDIT "admin"))
+(coin.credit "admin" (read-keyset "happybanana-airdrop-admin-keyset") 1000.0)
+
+(commit-tx)
+
+;  ;; Fund the airdrop account with the admin account
+(begin-tx "Fund airdrop account")
+(use free.happybanana-airdrop)
+
+(env-sigs [ { "key": "admin-key", "caps": [ (coin.TRANSFER "admin" "airdrop-banana-account" 1000.0), (GOVERNANCE) ] } ])
+
+(fund-airdrop-account "admin" 1000.0)
+
+(commit-tx)
+
+;; Add user accounts to whitelist
+(begin-tx "Add accounts to airdrop whitelist")
+(use free.happybanana-airdrop)
+
+(env-sigs [ { "key": "admin-key", "caps": [ (GOVERNANCE) ] } ])
+
+(set-whitelist ["pippo"])
+
+(commit-tx)
+
+;; Try redeeming the airdrop for users
+(begin-tx "Take airdrop (first time)")
+(use free.happybanana-airdrop)
+
+(env-sigs [ { "key": "gigi-key", "caps": [ (coin.TRANSFER "airdrop-banana-account" "gigi" 10.0), (ACCOUNT-OWNER "gigi") ] }
+            { "key": "admin-key", "caps": [ (coin.TRANSFER "airdrop-banana-account" "gigi" 10.0), (ACCOUNT-OWNER "gigi"), (GOVERNANCE) ] } ])
+
+(take-airdrop "gigi" (read-keyset "gigi-keyset"))
+
+(commit-tx)
+
+;; Try redeeming the airdrop for users a second time (should fail)
+(begin-tx "Take airdrop (second time should fail)")
+(use free.happybanana-airdrop)
+
+(env-sigs [ { "key": "gigi-key", "caps": [ (coin.TRANSFER "airdrop-banana-account" "gigi" 10.0), (ACCOUNT-OWNER "gigi") ] }
+            { "key": "admin-key", "caps": [] } ])
+
+(take-airdrop "gigi" (read-keyset "gigi-keyset"))
+
+(commit-tx)
+
+;; Get all whitelist entries
+(begin-tx "Get all whitelist entries")
+(use free.happybanana-airdrop)
+
+(get-whitelist)
+
+(commit-tx)
+
+(env-enable-repl-natives false)

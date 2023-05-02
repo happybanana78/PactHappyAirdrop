@@ -1,0 +1,7 @@
+.vscode
+.pact-history
+pact/.pact-history
+deploy/deploy_testnet.js
+deploy/node_modules
+deploy/functions/addUserToWhitelist.js
+deploy/functions/getWhitelist.js

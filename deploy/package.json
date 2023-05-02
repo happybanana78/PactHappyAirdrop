@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@kadena/chainweb-node-client": "^0.2.5",
+    "@kadena/client": "^0.2.11"
+  }
+}
